@@ -1,5 +1,6 @@
+## Bradley Scharf
 ## SI 364
-## Winter 2018
+## FALL 2018
 ## HW 2 - Part 1
 
 ## This homework has 3 parts, all of which should be completed inside this file (and a little bit inside the /templates directory).
@@ -11,10 +12,12 @@
 #############################
 ##### IMPORT STATEMENTS #####
 #############################
-from flask import Flask, request, render_template, url_for
+from flask import Flask, request, render_template, url_for, flash, redirect
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, RadioField, ValidationError
 from wtforms.validators import Required
+import requests
+import json
 
 #####################
 ##### APP SETUP #####
@@ -27,6 +30,10 @@ app.config['SECRET_KEY'] = 'hardtoguessstring'
 ###### FORMS #######
 ####################
 
+class AlbumEntryForm(FlaskForm):
+	Album_Name = StringField('Enter the name of an album:', validators=[Required()])
+	User_Likes = RadioField('How much do you like this album? (1 low, 3 high)', choices=[('1', '1'), ('2', '2'), ('3' '3')], validators=[Required()])
+	Submit = SubmitField('Submit')
 
 
 
@@ -39,10 +46,74 @@ def hello_world():
     return 'Hello World!'
 
 
+
 @app.route('/user/<name>')
 def hello_user(name):
     return '<h1>Hello {0}<h1>'.format(name)
 
 
+
+@app.route('/artistform')
+def artist_form():
+    return render_template('artistform.html')
+
+
+
+@app.route('/artistinfo', methods = ['GET' , 'POST'])
+def artist_info():
+		if request.method == 'GET':
+			artist = request.args['artist']
+			params = {'term': artist}
+			response = requests.get('https://itunes.apple.com/search', params = params)
+			response_py = json.loads(response.text)
+			return render_template('artist_info.html', objects = response_py['results'])
+
+
+
+@app.route('/artistlinks')
+def artist_links():
+    return render_template('artist_links.html')
+
+
+
+@app.route('/specific/song/<artist_name>')
+def specific_artists(artist_name):
+	params = {'term': artist_name}
+	response = requests.get('https://itunes.apple.com/search', params = params)
+	response_py = json.loads(response.text)
+	return render_template('specific_artist.html', results = response_py['results'])
+
+
+
+@app.route('/album_entry')
+def album_entry():
+	entry_form = AlbumEntryForm()
+	return render_template('album_entry.html', form = entry_form)
+
+
+
+@app.route('/album_result', methods = ['GET', 'POST'])
+def album_result():
+	form = AlbumEntryForm(request.form)
+	if request.method == 'POST' and form.validate_on_submit():
+		Album_Name = form.Album_Name.data
+		User_Likes = form.User_Likes.data
+		return render_template('album_data.html', Album_Name = Album_Name, User_Likes = User_Likes)
+	flash('All fields are required!')
+	return redirect(url_for('album_entry'))
+
+
+
 if __name__ == '__main__':
     app.run(use_reloader=True,debug=True)
+
+
+
+
+
+
+
+
+
+
+
